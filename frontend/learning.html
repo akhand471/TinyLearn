@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Learn Fun - Self Learning App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap');
+        body {
+            font-family: 'Comic Neue', cursive;
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .animate-bounce {
+            animation: bounce 1s infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+            40%, 43% { transform: translate3d(0,-30px,0); }
+            70% { transform: translate3d(0,-15px,0); }
+            90% { transform: translate3d(0,-4px,0); }
+        }
+        .hover-scale:hover {
+            transform: scale(1.05);
+        }
+        .hover-scale-110:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icon components (simplified versions)
+        const Icon = ({ name, size = 20, className = "", onClick }) => {
+            const icons = {
+                home: "🏠",
+                book: "📚", 
+                gamepad: "🎮",
+                info: "ℹ️",
+                volume: "🔊",
+                star: "⭐",
+                trophy: "🏆",
+                heart: "❤️"
+            };
+            
+            return (
+                <span 
+                    className={`inline-block text-${size === 20 ? 'base' : 'lg'} ${className}`}
+                    onClick={onClick}
+                    style={{ fontSize: `${size}px` }}
+                >
+                    {icons[name] || "❓"}
+                </span>
+            );
+        };
+
+        const SelfLearnKidsApp = () => {
+            const [currentPage, setCurrentPage] = useState('home');
+            const [gameScore, setGameScore] = useState(0);
+            const [selectedCards, setSelectedCards] = useState([]);
+            const [matchedPairs, setMatchedPairs] = useState([]);
+            const [showSuccess, setShowSuccess] = useState(false);
+
+            // Sample data for learning content
+            const alphabets = [
+                { letter: 'A', word: 'Apple', color: 'bg-red-400', emoji: '🍎' },
+                { letter: 'B', word: 'Ball', color: 'bg-blue-400', emoji: '⚽' },
+                { letter: 'C', word: 'Cat', color: 'bg-yellow-400', emoji: '🐱' },
+                { letter: 'D', word: 'Dog', color: 'bg-green-400', emoji: '🐶' },
+                { letter: 'E', word: 'Elephant', color: 'bg-purple-400', emoji: '🐘' },
+                { letter: 'F', word: 'Fish', color: 'bg-pink-400', emoji: '🐟' }
+            ];
+
+            const numbers = [
+                { num: 1, word: 'One', items: '🌟' },
+                { num: 2, word: 'Two', items: '🌟🌟' },
+                { num: 3, word: 'Three', items: '🌟🌟🌟' },
+                { num: 4, word: 'Four', items: '🌟🌟🌟🌟' },
+                { num: 5, word: 'Five', items: '🌟🌟🌟🌟🌟' }
+            ];
+
+            const colors = [
+                { name: 'Red', hex: 'bg-red-500', emoji: '❤️' },
+                { name: 'Blue', hex: 'bg-blue-500', emoji: '💙' },
+                { name: 'Green', hex: 'bg-green-500', emoji: '💚' },
+                { name: 'Yellow', hex: 'bg-yellow-500', emoji: '💛' },
+                { name: 'Purple', hex: 'bg-purple-500', emoji: '💜' }
+            ];
+
+            const shapes = [
+                { name: 'Circle', emoji: '⭕', description: 'Round like a ball!' },
+                { name: 'Square', emoji: '⬜', description: 'Four equal sides!' },
+                { name: 'Triangle', emoji: '🔺', description: 'Three pointy corners!' },
+                { name: 'Star', emoji: '⭐', description: 'Sparkly and bright!' }
+            ];
+
+            // Memory game data
+            const memoryCards = [
+                { id: 1, emoji: '🐶', name: 'Dog' },
+                { id: 2, emoji: '🐱', name: 'Cat' },
+                { id: 3, emoji: '🐸', name: 'Frog' },
+                { id: 4, emoji: '🦋', name: 'Butterfly' }
+            ];
+
+            const allMemoryCards = [...memoryCards, ...memoryCards].map((card, index) => ({
+                ...card,
+                uniqueId: index,
+                isFlipped: false,
+                isMatched: false
+            }));
+
+            const [memoryGameCards, setMemoryGameCards] = useState([]);
+
+            // Initialize memory game
+            useEffect(() => {
+                setMemoryGameCards(shuffleArray([...allMemoryCards]));
+            }, []);
+
+            // Audio feedback function
+            const playAudio = (text) => {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.8;
+                    utterance.pitch = 1.2;
+                    speechSynthesis.speak(utterance);
+                }
+            };
+
+            // Utility function to shuffle array
+            const shuffleArray = (array) => {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            };
+
+            // Memory game logic
+            const handleCardFlip = (cardIndex) => {
+                if (selectedCards.length === 2) return;
+                if (memoryGameCards[cardIndex].isFlipped) return;
+
+                const newCards = [...memoryGameCards];
+                newCards[cardIndex].isFlipped = true;
+                setMemoryGameCards(newCards);
+
+                const newSelectedCards = [...selectedCards, cardIndex];
+                setSelectedCards(newSelectedCards);
+
+                if (newSelectedCards.length === 2) {
+                    const firstCard = newCards[newSelectedCards[0]];
+                    const secondCard = newCards[newSelectedCards[1]];
+
+                    if (firstCard.id === secondCard.id) {
+                        setTimeout(() => {
+                            const updatedCards = [...newCards];
+                            updatedCards[newSelectedCards[0]].isMatched = true;
+                            updatedCards[newSelectedCards[1]].isMatched = true;
+                            setMemoryGameCards(updatedCards);
+                            setMatchedPairs([...matchedPairs, firstCard.id]);
+                            setGameScore(gameScore + 10);
+                            setShowSuccess(true);
+                            setTimeout(() => setShowSuccess(false), 1000);
+                            playAudio('Great job! You found a match!');
+                            setSelectedCards([]);
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            const updatedCards = [...newCards];
+                            updatedCards[newSelectedCards[0]].isFlipped = false;
+                            updatedCards[newSelectedCards[1]].isFlipped = false;
+                            setMemoryGameCards(updatedCards);
+                            setSelectedCards([]);
+                        }, 1000);
+                    }
+                }
+            };
+
+            // Reset memory game
+            const resetMemoryGame = () => {
+                setMemoryGameCards(shuffleArray([...allMemoryCards]));
+                setSelectedCards([]);
+                setMatchedPairs([]);
+                setGameScore(0);
+            };
+
+            // Navigation component
+            const Navigation = () => (
+                <nav className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 shadow-lg">
+                    <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                            <Icon name="star" className="animate-spin" />
+                            Kids Learn Fun!
+                        </h1>
+                        <div className="flex gap-2 md:gap-4 flex-wrap">
+                            {[
+                                { id: 'home', icon: 'home', label: 'Home' },
+                                { id: 'learn', icon: 'book', label: 'Learn' },
+                                { id: 'games', icon: 'gamepad', label: 'Games' },
+                                { id: 'about', icon: 'info', label: 'About' }
+                            ].map(({ id, icon, label }) => (
+                                <button
+                                    key={id}
+                                    onClick={() => setCurrentPage(id)}
+                                    className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full font-semibold transition-all transform hover-scale ${
+                                        currentPage === id
+                                            ? 'bg-white text-purple-600 shadow-lg'
+                                            : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+                                    }`}
+                                >
+                                    <Icon name={icon} size={16} />
+                                    <span className="text-sm md:text-base">{label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </nav>
+            );
+
+            // Home Page
+            const HomePage = () => (
+                <div className="min-h-screen bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 p-4 md:p-8">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-12 mb-8 transform hover-scale transition-all">
+                            <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-6">
+                                Welcome Little Learner! 🌟
+                            </h2>
+                            <p className="text-lg md:text-2xl text-gray-600 mb-8">
+                                Let's learn and play together! Choose what you want to explore today.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {[
+                                    { page: 'learn', emoji: '📚', title: 'Learn ABC & 123', desc: 'Letters, Numbers & More!' },
+                                    { page: 'games', emoji: '🎮', title: 'Fun Games', desc: 'Memory & Matching Games!' },
+                                    { page: 'about', emoji: '❤️', title: 'About Us', desc: 'Made with Love!' }
+                                ].map(({ page, emoji, title, desc }) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className="bg-gradient-to-br from-yellow-300 to-orange-300 p-6 md:p-8 rounded-2xl shadow-xl hover:shadow-2xl transform hover-scale-110 transition-all duration-300"
+                                    >
+                                        <div className="text-4xl md:text-6xl mb-4">{emoji}</div>
+                                        <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">{title}</h3>
+                                        <p className="text-sm md:text-base text-gray-600">{desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Learn Page
+            const LearnPage = () => (
+                <div className="min-h-screen bg-gradient-to-br from-green-200 via-blue-200 to-purple-200 p-4 md:p-8">
+                    <div className="max-w-6xl mx-auto">
+                        <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">Let's Learn Together! 📚</h2>
+                        
+                        {/* Alphabets Section */}
+                        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 mb-8">
+                            <h3 className="text-2xl md:text-3xl font-bold text-purple-600 mb-6 flex items-center gap-2">
+                                <Icon name="volume" className="cursor-pointer hover:text-purple-800" onClick={() => playAudio('Let us learn the alphabet')} />
+                                Alphabets 🔤
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                {alphabets.map(({ letter, word, color, emoji }) => (
+                                    <div
+                                        key={letter}
+                                        onClick={() => playAudio(`${letter} for ${word}`)}
+                                        className={`${color} p-4 md:p-6 rounded-2xl cursor-pointer transform hover-scale-110 transition-all shadow-lg hover:shadow-xl text-center`}
+                                    >
+                                        <div className="text-3xl md:text-4xl font-bold text-white mb-2">{letter}</div>
+                                        <div className="text-2xl md:text-3xl mb-2">{emoji}</div>
+                                        <div className="text-white font-semibold text-sm md:text-base">{word}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Numbers Section */}
+                        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 mb-8">
+                            <h3 className="text-2xl md:text-3xl font-bold text-blue-600 mb-6 flex items-center gap-2">
+                                <Icon name="volume" className="cursor-pointer hover:text-blue-800" onClick={() => playAudio('Let us count numbers')} />
+                                Numbers 🔢
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                {numbers.map(({ num, word, items }) => (
+                                    <div
+                                        key={num}
+                                        onClick={() => playAudio(`${num} ${word}`)}
+                                        className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 md:p-6 rounded-2xl cursor-pointer transform hover-scale-110 transition-all shadow-lg hover:shadow-xl text-center text-white"
+                                    >
+                                        <div className="text-4xl md:text-5xl font-bold mb-2">{num}</div>
+                                        <div className="text-xl md:text-2xl mb-2">{items}</div>
+                                        <div className="font-semibold text-sm md:text-base">{word}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Colors Section */}
+                        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 mb-8">
+                            <h3 className="text-2xl md:text-3xl font-bold text-pink-600 mb-6 flex items-center gap-2">
+                                <Icon name="volume" className="cursor-pointer hover:text-pink-800" onClick={() => playAudio('Let us learn colors')} />
+                                Colors 🌈
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                {colors.map(({ name, hex, emoji }) => (
+                                    <div
+                                        key={name}
+                                        onClick={() => playAudio(name)}
+                                        className={`${hex} p-4 md:p-6 rounded-2xl cursor-pointer transform hover-scale-110 transition-all shadow-lg hover:shadow-xl text-center text-white`}
+                                    >
+                                        <div className="text-3xl md:text-4xl mb-2">{emoji}</div>
+                                        <div className="text-lg md:text-xl font-bold">{name}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Shapes Section */}
+                        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8">
+                            <h3 className="text-2xl md:text-3xl font-bold text-green-600 mb-6 flex items-center gap-2">
+                                <Icon name="volume" className="cursor-pointer hover:text-green-800" onClick={() => playAudio('Let us learn shapes')} />
+                                Shapes 📐
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {shapes.map(({ name, emoji, description }) => (
+                                    <div
+                                        key={name}
+                                        onClick={() => playAudio(`${name}. ${description}`)}
+                                        className="bg-gradient-to-br from-green-400 to-green-600 p-4 md:p-6 rounded-2xl cursor-pointer transform hover-scale-110 transition-all shadow-lg hover:shadow-xl text-center text-white"
+                                    >
+                                        <div className="text-5xl md:text-6xl mb-2">{emoji}</div>
+                                        <div className="text-lg md:text-xl font-bold mb-2">{name}</div>
+                                        <div className="text-xs md:text-sm opacity-90">{description}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Games Page
+            const GamesPage = () => (
+                <div className="min-h-screen bg-gradient-to-br from-yellow-200 via-orange-200 to-red-200 p-4 md:p-8">
+                    <div className="max-w-4xl mx-auto">
+                        <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">Fun Games! 🎮</h2>
+                        
+                        {/* Score Display */}
+                        <div className="bg-white rounded-2xl shadow-xl p-4 mb-8 text-center">
+                            <div className="flex items-center justify-center gap-4">
+                                <Icon name="trophy" className="text-yellow-500" size={32} />
+                                <span className="text-xl md:text-2xl font-bold text-gray-800">Score: {gameScore}</span>
+                                <Icon name="heart" className="text-red-500" size={32} />
+                            </div>
+                        </div>
+
+                        {/* Memory Game */}
+                        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8">
+                            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                                <h3 className="text-2xl md:text-3xl font-bold text-orange-600">Memory Match Game 🧠</h3>
+                                <button
+                                    onClick={resetMemoryGame}
+                                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 md:px-6 py-2 rounded-full font-semibold transform hover-scale transition-all"
+                                >
+                                    New Game
+                                </button>
+                            </div>
+                            
+                            <p className="text-gray-600 mb-6 text-center text-sm md:text-base">Find the matching pairs! Click on cards to flip them.</p>
+                            
+                            <div className="grid grid-cols-4 gap-2 md:gap-4 max-w-sm md:max-w-md mx-auto">
+                                {memoryGameCards.map((card, index) => (
+                                    <div
+                                        key={card.uniqueId}
+                                        onClick={() => handleCardFlip(index)}
+                                        className={`aspect-square rounded-xl cursor-pointer transform transition-all duration-300 ${
+                                            card.isFlipped || card.isMatched
+                                                ? 'bg-white shadow-lg scale-105'
+                                                : 'bg-gradient-to-br from-purple-400 to-pink-400 hover-scale-110'
+                                        } ${card.isMatched ? 'ring-2 md:ring-4 ring-green-400' : ''}`}
+                                    >
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            {card.isFlipped || card.isMatched ? (
+                                                <span className="text-2xl md:text-4xl">{card.emoji}</span>
+                                            ) : (
+                                                <span className="text-2xl md:text-4xl">❓</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Success Animation */}
+                            {showSuccess && (
+                                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
+                                    <div className="bg-green-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-full text-lg md:text-2xl font-bold animate-bounce shadow-2xl">
+                                        🎉 Great Match! 🎉
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Game Complete */}
+                            {matchedPairs.length === memoryCards.length && (
+                                <div className="text-center mt-8 p-4 md:p-6 bg-gradient-to-r from-green-400 to-blue-400 rounded-2xl text-white">
+                                    <h4 className="text-2xl md:text-3xl font-bold mb-2">🎉 Congratulations! 🎉</h4>
+                                    <p className="text-lg md:text-xl">You found all the pairs! Final Score: {gameScore}</p>
+                                    <button
+                                        onClick={resetMemoryGame}
+                                        className="mt-4 bg-white text-green-600 px-4 md:px-6 py-2 rounded-full font-semibold hover:shadow-lg transform hover-scale transition-all"
+                                    >
+                                        Play Again
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // About Page
+            const AboutPage = () => (
+                <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-200 to-indigo-200 p-4 md:p-8">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-12 text-center">
+                            <h2 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-8">
+                                About Kids Learn Fun! ❤️
+                            </h2>
+                            <div className="text-4xl md:text-6xl mb-6">👶🏻👧🏻🧒🏻</div>
+                            <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
+                                This app is specially designed for kids aged 3 to 6 years old. 
+                                We believe learning should be fun, colorful, and interactive!
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 text-left">
+                                <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-4 md:p-6 rounded-2xl">
+                                    <h3 className="text-xl md:text-2xl font-bold text-blue-800 mb-4">🎯 Our Mission</h3>
+                                    <p className="text-gray-700 text-sm md:text-base">
+                                        To make early childhood learning enjoyable through interactive games, 
+                                        bright colors, and audio feedback that helps kids learn at their own pace.
+                                    </p>
+                                </div>
+                                <div className="bg-gradient-to-br from-green-100 to-green-200 p-4 md:p-6 rounded-2xl">
+                                    <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-4">✨ What We Offer</h3>
+                                    <ul className="text-gray-700 space-y-2 text-sm md:text-base">
+                                        <li>• Interactive alphabet learning</li>
+                                        <li>• Number counting with visuals</li>
+                                        <li>• Color recognition games</li>
+                                        <li>• Shape identification</li>
+                                        <li>• Memory matching games</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div className="mt-6 md:mt-8 p-4 md:p-6 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-2xl">
+                                <p className="text-base md:text-lg text-gray-800">
+                                    <strong>Made with ❤️ for little learners everywhere!</strong>
+                                </p>
+                                <p className="text-gray-600 mt-2 text-sm md:text-base">
+                                    Built using React.js with love and care for your child's learning journey.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // Main App Render
+            return (
+                <div className="min-h-screen">
+                    <Navigation />
+                    {currentPage === 'home' && <HomePage />}
+                    {currentPage === 'learn' && <LearnPage />}
+                    {currentPage === 'games' && <GamesPage />}
+                    {currentPage === 'about' && <AboutPage />}
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(<SelfLearnKidsApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
